@@ -1,7 +1,7 @@
 from enum import Enum
 from os import stat
 import re
-from typing import Optional
+from typing import Dict, Optional
 
 
 class RtspMethod(Enum):
@@ -14,11 +14,13 @@ class RtspMethod(Enum):
 class RtspStatus(Enum):
     OK = "200 OK"
     NOT_FOUND = "404 NOT FOUND"
+    CONNECTION_ERROR = "500 CONNECTION ERROR"
 
 
 STATUS_TO_CODE = {
     "200": RtspStatus.OK,
     "404": RtspStatus.NOT_FOUND,
+    "500": RtspStatus.CONNECTION_ERROR,
 }
 
 
@@ -75,17 +77,18 @@ class RtspResponseHeader(RtspHeader):
 
 
 class RtspPacket:
-    headers: dict
+    headers: Dict[str, str]
 
     def __init__(self, header: RtspHeader):
         self.header = header
         self.headers = {}
 
-    def set_header(self, key: str, value: str):
-        self.headers[key] = value
+    def set_header(self, key: str, value: object):
+        self.headers[key] = str(value)
 
     def get_header(self, key: str) -> Optional[str]:
         return self.headers.get(key, None)
+
 
     def _encode_headers(self) -> str:
         header_str = ""
