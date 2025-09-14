@@ -42,7 +42,7 @@ class TestRtpPacket(unittest.TestCase):
     """
     The fields of a test packet to test
     """
-    TEST_PACKET_FIELDS = {
+    TEST_PACKET_FIELDS_1 = {
         "version": 2,
         "padding": 1,
         "extension": 1,
@@ -54,43 +54,63 @@ class TestRtpPacket(unittest.TestCase):
         "payload": bytearray([0xA, 0xB, 0xC]),
     }
 
-    def test_decode(self):
+    TEST_PACKET_FIELDS_2 = {
+        "version": 1,
+        "padding": 0,
+        "extension": 0,
+        "cc": 0xA,
+        "marker": 0,
+        "seqnum": 0xBEEF,
+        "pt": 0x24,
+        "ssrc": 0xBEEFDEAD,
+        "payload": bytearray([0x1, 0x2, 0x3]),
+    }
+
+    def _single_decode_test(self, test_packet_fields):
         packet = RtpPacket()
         packet.decode(
             self.generate_test_packet_bytes(
-                **TestRtpPacket.TEST_PACKET_FIELDS, timestamp=int(time.time())
+                **test_packet_fields, timestamp=int(time.time())
             )
         )
 
-        self.assertEqual(packet.version(), TestRtpPacket.TEST_PACKET_FIELDS["version"])
-        self.assertEqual(packet.seqNum(), TestRtpPacket.TEST_PACKET_FIELDS["seqnum"])
-        self.assertEqual(packet.payloadType(), TestRtpPacket.TEST_PACKET_FIELDS["pt"])
-        self.assertEqual(
-            packet.getPayload(), TestRtpPacket.TEST_PACKET_FIELDS["payload"]
-        )
+        self.assertEqual(packet.version(), test_packet_fields["version"])
+        self.assertEqual(packet.seqNum(), test_packet_fields["seqnum"])
+        self.assertEqual(packet.payloadType(), test_packet_fields["pt"])
+        self.assertEqual(packet.getPayload(), test_packet_fields["payload"])
 
-    def test_encode(self):
+    def test_decode(self):
+        self._single_decode_test(TestRtpPacket.TEST_PACKET_FIELDS_1)
+        self._single_decode_test(TestRtpPacket.TEST_PACKET_FIELDS_2)
+
+    def _single_encode_test(self, test_packet_fields):
         packet = RtpPacket()
         cur_time = int(time.time())  # FIXME: how to make more deterministic?
 
-        packet.encode(**TestRtpPacket.TEST_PACKET_FIELDS)
+        packet.encode(**test_packet_fields)
         correct_bytes = self.generate_test_packet_bytes(
-            **TestRtpPacket.TEST_PACKET_FIELDS, timestamp=cur_time
+            **test_packet_fields, timestamp=cur_time
         )
 
         self.assertEqual(packet.getPacket(), correct_bytes)
 
-    def test_encode_decode(self):
+    def test_encode(self):
+        self._single_encode_test(TestRtpPacket.TEST_PACKET_FIELDS_1)
+        self._single_encode_test(TestRtpPacket.TEST_PACKET_FIELDS_2)
+
+    def _single_encode_decode_test(self, test_packet_fields):
         packet = RtpPacket()
-        packet.encode(**TestRtpPacket.TEST_PACKET_FIELDS)
+        packet.encode(**test_packet_fields)
         packet.decode(packet.getPacket())
 
-        self.assertEqual(packet.version(), TestRtpPacket.TEST_PACKET_FIELDS["version"])
-        self.assertEqual(packet.seqNum(), TestRtpPacket.TEST_PACKET_FIELDS["seqnum"])
-        self.assertEqual(packet.payloadType(), TestRtpPacket.TEST_PACKET_FIELDS["pt"])
-        self.assertEqual(
-            packet.getPayload(), TestRtpPacket.TEST_PACKET_FIELDS["payload"]
-        )
+        self.assertEqual(packet.version(), test_packet_fields["version"])
+        self.assertEqual(packet.seqNum(), test_packet_fields["seqnum"])
+        self.assertEqual(packet.payloadType(), test_packet_fields["pt"])
+        self.assertEqual(packet.getPayload(), test_packet_fields["payload"])
+
+    def test_encode_decode(self):
+        self._single_encode_decode_test(TestRtpPacket.TEST_PACKET_FIELDS_1)
+        self._single_encode_decode_test(TestRtpPacket.TEST_PACKET_FIELDS_2)
 
     def test_error_raised_in_limits(self):
         packet = RtpPacket()
