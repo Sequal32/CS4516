@@ -173,8 +173,10 @@ class Client:
             threading.Thread(target=self.recvRtspReply).start()
             # Fill in Start
             # Update RTSP sequence number.
-            # self.rtspSeq ...
+            self.rtspSeq += 1
             # Write the RTSP request to be sent.
+
+            request = RtpPacket()
             # request = ...
             # Keep track of the sent request.
             # self.requestSent = ...

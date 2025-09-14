@@ -1,7 +1,9 @@
 import unittest
 import time
+import textwrap
 
 from RtpPacket import RtpPacket
+from RtspPacket import RtspRequest, RtspMethod, RtspResponse, RtspStatus
 
 
 def bitstring_to_bytes(s):
@@ -160,6 +162,106 @@ class TestRtpPacket(unittest.TestCase):
         self.assertRaises(
             ValueError, packet.encode, 0, 0, 0, 0, 0, 0, 0, -1, bytearray()
         )
+
+
+class TestRtspPacket(unittest.TestCase):
+    def test_rtsp_request_init(self):
+        packet = RtspRequest(RtspMethod.PLAY, "movie.Mjpeg")
+
+        self.assertEqual(packet.method(), RtspMethod.PLAY)
+        self.assertEqual(packet.filename(), "movie.Mjpeg")
+
+    def test_rtsp_packet_header_get_set(self):
+        packet = RtspRequest(RtspMethod.PLAY, "movie.Mjpeg")
+        packet.set_header("CSeq", "1")
+        packet.set_header("Test", "200")
+
+        self.assertEqual(packet.get_header("CSeq"), "1")
+        self.assertEqual(packet.get_header("Test"), "200")
+
+    def test_rtsp_request_encode(self):
+        packet = RtspRequest(RtspMethod.PLAY, "movie.Mjpeg")
+
+        self.assertEqual(
+            packet.encode().strip(),
+            f"""
+                PLAY movie.Mjpeg RTSP/1.0
+            """.strip(),
+        )
+
+        packet = RtspRequest(RtspMethod.SETUP, "movie.Mjpeg")
+
+        self.assertEqual(
+            packet.encode().strip(),
+            f"""
+                SETUP movie.Mjpeg RTSP/1.0
+            """.strip(),
+        )
+
+    def test_rtsp_request_encode_with_headers(self):
+        packet = RtspRequest(RtspMethod.PLAY, "movie.Mjpeg")
+        packet.set_header("CSeq", "1")
+        packet.set_header("Test", "200")
+
+        packet_str = packet.encode().split("\n")
+
+        self.assertEqual(packet_str[0], "PLAY movie.Mjpeg RTSP/1.0")
+        self.assertIn("CSeq: 1", packet_str)
+        self.assertIn("Test: 200", packet_str)
+
+    def test_rtsp_request_decode(self):
+        packet = RtspRequest.decode("PLAY movie.Mjpeg RTSP/1.0")
+
+        self.assertEqual(packet.method(), RtspMethod.PLAY)
+        self.assertEqual(packet.filename(), "movie.Mjpeg")
+
+    def test_rtsp_request_decode_with_headers(self):
+        packet = RtspRequest.decode(
+            """PLAY movie.Mjpeg RTSP/1.0
+CSeq: 1
+Test: 200"""
+        )
+
+        self.assertEqual(packet.method(), RtspMethod.PLAY)
+        self.assertEqual(packet.filename(), "movie.Mjpeg")
+
+    def test_rtsp_response_init(self):
+        packet = RtspResponse(RtspStatus.OK)
+        self.assertEqual(packet.status(), RtspStatus.OK)
+
+    def test_rtsp_response_header_get_set(self):
+        packet = RtspResponse(RtspStatus.OK)
+        packet.set_header("CSeq", "1")
+        packet.set_header("Test", "200")
+
+        self.assertEqual(packet.get_header("CSeq"), "1")
+        self.assertEqual(packet.get_header("Test"), "200")
+
+    def test_rtsp_response_encode(self):
+        packet = RtspResponse(RtspStatus.OK)
+
+        self.assertEqual(
+            packet.encode().strip(),
+            "RTSP/1.0 200 OK",
+        )
+
+    def test_rtsp_response_encode_with_headers(self):
+        packet = RtspResponse(RtspStatus.OK)
+        packet.set_header("CSeq", "1")
+        packet.set_header("Test", "200")
+
+        part_str = packet.encode().split("\n")
+
+        self.assertEqual(part_str[0], "RTSP/1.0 200 OK")
+        self.assertIn("CSeq: 1", part_str)
+        self.assertIn("Test: 200", part_str)
+
+    def test_rtsp_response_decode_with_headers(self):
+        packet = RtspResponse.decode("RTSP/1.0 200 OK\nCSeq: 1\nTest: 200")
+
+        self.assertEqual(packet.status(), RtspStatus.OK)
+        self.assertEqual(packet.get_header("CSeq"), "1")
+        self.assertEqual(packet.get_header("Test"), "200")
 
 
 if __name__ == "__main__":
